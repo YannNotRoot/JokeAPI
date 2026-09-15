@@ -1,0 +1,1 @@
+const API_Joke = 'https://v2.jokeapi.dev/joke/Any?lang=fr';
