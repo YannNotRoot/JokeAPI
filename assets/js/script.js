@@ -1,43 +1,93 @@
-const API_joke = 'https://v2.jokeapi.dev/joke/Any?lang=fr&blacklistFlags=nsfw,religious,political,racist,sexist,explicit';
+const API_JOKE = 'https://v2.jokeapi.dev/joke/Any?lang=fr&blacklistFlags=nsfw,religious,political,racist,sexist,explicit';
 
-document.getElementById('btn-add').addEventListener('click', async () => {
-    const response = await fetch(url);
-    const blague = await response.json();
+// LocalStorage
+let blaguesSauvegardees = JSON.parse(localStorage.getItem('blagues') || '[]');
+const jokesDejaAffichees = new Set(blaguesSauvegardees.map(b => b.id));
 
-    afficherBlague(blague);
+const tbody = document.getElementById('table-joke');
+
+// Affichage blagues stockées
+document.addEventListener('DOMContentLoaded', () => {
+    blaguesSauvegardees.forEach(blague => affichageTableau(blague));
 });
 
-async function getJoke() {
+// Récupération blague
+async function joke() {
     try {
-        const response = await fetch(API_joke);
-        const data = await response.json();
+        const response = await fetch(API_JOKE);
+        const blague = await response.json();
 
-        if (data.error) {
-            console.error('Erreur API :', data.message);
+        if (blague.error) {
+            console.error('Erreur API :', blague.message);
             return;
         }
 
-        addJokeToTable(data);
+        if (jokesDejaAffichees.has(blague.id)) {
+            console.log('Blague déjà récup');
+            return joke();
+        }
+
+        enregistrerEtAfficherBlague(blague);
     } catch (error) {
-        console.error('Erreur lors de la récupération de la blague :', error);
+        console.error('Erreur de récupération de la bague :', error);
     }
 }
 
-function afficherBlague(blague) {
-    const tbody = document.getElementById('table-jokes');
+// Sauvegarde et affichage
+function enregistrerEtAfficherBlague(blague) {
+    jokesDejaAffichees.add(blague.id);
+    blaguesSauvegardees.push(blague);
+    localStorage.setItem('blagues', JSON.stringify(blaguesSauvegardees));
 
-    const texteBlague = blague.type === 'single' 
-        ? blague.joke 
-        : `${blague.setup} <br> ${blague.delivery}`;
-
-    tbody.innerHTML += `
-        <tr>
-            <td>${blague.category}</td>
-            <td>${texteBlague}</td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Supprimer de la blague</button>
-            </td>
-        </tr>
-    `;
+    affichageTableau(blague);
 }
 
+// Gestion affichage
+function affichageTableau(blague) {
+    if (!tbody) {
+        console.error('Élément tbody introuvable');
+        return;
+    }
+
+    const texteBlague = blague.type === 'single'
+        ? blague.joke
+        : `${blague.setup} <br> <strong>${blague.delivery}</strong>`;
+
+    const tr = document.createElement('tr');
+    tr.dataset.id = blague.id;
+    tr.innerHTML = `
+        <td>${blague.category}</td>
+        <td>${texteBlague}</td>
+        <td>
+            <button class="btn btn-danger btn-sm btn-delete">Supprimer</button>
+        </td>
+    `;
+
+    tr.querySelector('.btn-delete').addEventListener('click', () => supprimerBlague(blague.id, tr));
+
+    tbody.appendChild(tr);
+}
+
+// Suppression synchronisée
+function supprimerBlague(id, elementLigne) {
+    elementLigne.remove();
+
+    jokesDejaAffichees.delete(id);
+
+    // Retrait LocalStorage
+    blaguesSauvegardees = blaguesSauvegardees.filter(b => b.id !== id);
+    localStorage.setItem('blagues', JSON.stringify(blaguesSauvegardees));
+}
+
+function clearAllJoke(){
+    localStorage.clear()
+
+    blaguesSauvegardees = [];
+    jokesDejaAffichees.clear();
+
+    document.getElementById('table-joke').innerHTML = '';
+}
+
+
+document.getElementById('btn-add')?.addEventListener('click', joke);
+document.getElementById('btn-clear')?.addEventListener('click', clearAllJoke);
