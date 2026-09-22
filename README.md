@@ -38,6 +38,3 @@ Une application web simple permettant d'afficher et de gérer des blagues en fra
 │       └── script.js   # Logique applicative et interactions API
 └── README.md           # Documentation du projet
 ```
-   ```
-
-
